@@ -37,7 +37,7 @@ class MetaRegister(type):
                 continue
 
             if str(type(attr)) == "<type 'instancemethod'>":
-                if hasattr(type(instance),name) and attr == getattr(type(instance),name):
+                if attr in methods or (hasattr(type(instance),name) and attr == getattr(type(instance),name)):
                     continue
                 methods.append(attr)
         return methods
@@ -64,9 +64,9 @@ class MetaRegister(type):
                 MetaRegister.commands.append(command)
 
     @staticmethod
-    def registerPlugin(main):
-        if main is not None:
-            for method in MetaRegister.getClassMethods(main):
+    def registerPlugin():
+        if pyplugin.__class__ is not None:
+            for method in MetaRegister.getClassMethods(pyplugin.__class__):
                 MetaRegister.register(method)
             for method in MetaRegister.getInstanceMethods(pyplugin):
                 MetaRegister.register(method)

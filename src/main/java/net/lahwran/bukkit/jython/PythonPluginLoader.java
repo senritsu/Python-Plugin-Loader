@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -19,6 +20,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.Validate;
 import org.bukkit.Server;
+import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventException;
 import org.bukkit.event.Listener;
@@ -40,6 +43,8 @@ import org.python.core.PyObject;
 import org.python.core.PyString;
 import org.python.util.PythonInterpreter;
 import org.yaml.snakeyaml.error.YAMLException;
+
+import sun.reflect.ReflectionFactory.GetReflectionFactoryAction;
 
 import com.master.bukkit.python.ReflectionHelper;
 
@@ -243,20 +248,22 @@ public class PythonPluginLoader implements PluginLoader {
             interp.exec("__builtin__.hook = hook");
             interp.exec("__builtin__.info = info");
             
-            // Hardcoded for now, may be worth thinking about generalizing it as sort of "addons" for the PythonPluginLoader
+            // Read in which scripts to load before and after plugin creation
             // Could be used to extend the capabilities of python plugins the same way the metaclass decorators do, without requiring any changes to the PythonPluginLoader itself
-            String[] pre_plugin_scripts = {"meta_decorators.py"};
-            String[] post_plugin_scripts = {"meta_loader.py"};
+            InputStream cfgstream = this.getClass().getClassLoader().getResourceAsStream("config.yml");
+            Configuration cfg = YamlConfiguration.loadConfiguration(cfgstream);
+            cfgstream.close();
+            List<String> pre_plugin_scripts = cfg.getStringList("scripts.pre");
+            List<String> post_plugin_scripts = cfg.getStringList("scripts.post");
             
             // Run scripts designed to be run before plugin creation
             for (String script : pre_plugin_scripts) {
-	            InputStream metastream = this.getClass().getClassLoader().getResourceAsStream("scripts/"+script);
-	            interp.execfile(metastream);
-	            metastream.close();
+	            InputStream stream = this.getClass().getClassLoader().getResourceAsStream("scripts/"+script);
+	            interp.execfile(stream);
+	            stream.close();
             }
 
             interp.execfile(instream);
-
             instream.close();
 
             try {
@@ -289,15 +296,16 @@ public class PythonPluginLoader implements PluginLoader {
                 result = (PythonPlugin) pyClass.__call__().__tojava__(PythonPlugin.class);
             
             interp.set("pyplugin", result);
+            interp.exec("__builtin__.pyplugin = pyplugin");
             
             result.hooks = hook;
             result.interp = interp;
             
             // Run scripts designed to be run after plugin creation
             for (String script : post_plugin_scripts) {
-	            InputStream metastream = this.getClass().getClassLoader().getResourceAsStream("scripts/"+script);
-	            interp.execfile(metastream);
-	            metastream.close();
+	            InputStream stream = this.getClass().getClassLoader().getResourceAsStream("scripts/"+script);
+	            interp.execfile(stream);
+	            stream.close();
             }
             
             result.initialize(this, server, description, dataFolder, file);

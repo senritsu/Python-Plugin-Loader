@@ -1,2 +1,6 @@
-MetaRegister.registerPlugin(pyplugin.__class__)
+MetaRegister.registerPlugin()
 MetaRegister.registerStatic()
+try:
+    addSupportedCharacters(__special_characters__)
+except NameError:
+    pass

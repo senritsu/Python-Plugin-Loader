@@ -1,0 +1,3 @@
+scripts:
+  pre: [meta_decorators.py,boilerplate.py]
+  post: [meta_loader.py]
